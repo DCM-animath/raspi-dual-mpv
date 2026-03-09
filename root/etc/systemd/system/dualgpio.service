@@ -1,0 +1,17 @@
+[Unit]
+Description=GPIO switcher untuk dual MP4
+After=dualmp4.service
+Requires=dualmp4.service
+PartOf=dualmp4.service
+
+[Service]
+Type=simple
+User=root
+# Tidak pakai sleep hardcoded — gpio_switch.py sudah tunggu socket sendiri
+ExecStart=/usr/bin/python3 /boot/firmware/splash/gpio_switch.py
+Restart=always
+RestartSec=3
+TimeoutStopSec=5
+
+[Install]
+WantedBy=dualmp4.service

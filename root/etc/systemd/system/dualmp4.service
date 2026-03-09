@@ -1,0 +1,18 @@
+[Unit]
+Description=Dual MP4 players (MPV kiri & kanan)
+After=systemd-logind.service graphical.target
+Wants=graphical.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=WAYLAND_DISPLAY=wayland-0
+ExecStart=/bin/bash /boot/firmware/splash/start_dual.sh
+Restart=always
+RestartSec=3
+TimeoutStopSec=5
+
+[Install]
+WantedBy=multi-user.target
