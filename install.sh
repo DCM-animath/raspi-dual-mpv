@@ -57,8 +57,20 @@ fi
 section "2. Install Packages"
 info "Update apt & install packages..."
 apt-get update -qq
-apt-get install -y git mpv ffmpeg python3-gpiod socat
-ok "Packages terinstall: git mpv ffmpeg python3-gpiod socat"
+apt-get install -y git mpv ffmpeg socat python3-pip
+ok "Packages terinstall: git mpv ffmpeg socat"
+
+# python3-gpiod - coba apt dulu, fallback ke pip
+info "Install python3-gpiod..."
+if apt-get install -y python3-gpiod 2>/dev/null; then
+  ok "python3-gpiod terinstall via apt"
+elif apt-get install -y python3-libgpiod 2>/dev/null; then
+  ok "python3-libgpiod terinstall via apt"
+else
+  info "Fallback: install gpiod via pip..."
+  pip3 install gpiod --break-system-packages
+  ok "gpiod terinstall via pip"
+fi
 
 # ── Clone / update repo ───────────────────────────────────────
 section "3. Download dari GitHub"
