@@ -3,7 +3,6 @@ set -euo pipefail
 
 REPO_URL="https://github.com/DCM-animath/raspi-dual-mpv.git"
 APP_DIR="/opt/raspi-dual-mpv"
-SERVICE_DIR="/etc/systemd/system"
 
 if [[ $EUID -ne 0 ]]; then
   echo "Jalankan script ini dengan sudo."
@@ -11,7 +10,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 apt-get update
-apt-get install -y git mpv python3 python3-gpiozero rsync
+apt-get install -y git mpv ffmpeg python3-gpiozero python3-gpiod rsync
 
 rm -rf "$APP_DIR"
 git clone "$REPO_URL" "$APP_DIR"
@@ -19,10 +18,10 @@ git clone "$REPO_URL" "$APP_DIR"
 rsync -a "$APP_DIR/root/" /
 
 chmod +x /boot/firmware/splash/start_dual.sh || true
-chmod +x /usr/local/bin/live_monitor.sh || true
-chmod +x /usr/local/bin/convert_all.sh || true
-chmod +x /usr/local/bin/mpv_sync_watchdog.py || true
-chmod +x /usr/local/bin/gpio_switch.py || true
+chmod +x /boot/firmware/splash/live_monitor.sh || true
+chmod +x /boot/firmware/splash/convert_all.sh || true
+chmod +x /boot/firmware/splash/mpv_sync_watchdog.py || true
+chmod +x /boot/firmware/splash/gpio_switch.py || true
 
 systemctl daemon-reload
 systemctl enable dualmp4.service
