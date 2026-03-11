@@ -1,119 +1,131 @@
 @echo off
-title Upload Dual MPV ke GitHub
-color 0A
+setlocal ENABLEDELAYEDEXPANSION
+title GitHub Push Helper
 
-echo ============================================
-echo     UPLOAD PROJECT DUAL MPV KE GITHUB
-echo ============================================
+echo ==========================================
+echo   GitHub Push Helper
+echo ==========================================
 echo.
 
-:: ── KONFIGURASI — sesuaikan di sini ──────────────────────
-set GITHUB_USER=DCM-animath
-set REPO_NAME=raspi-dual-mpv
-:: ──────────────────────────────────────────────────────────
-
-:: Cek git tersedia
-where git >nul 2>&1
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Git tidak ditemukan.
-    echo         Download di: https://git-scm.com/download/win
-    pause
-    exit /b 1
-)
-
-:: Pindah ke folder script ini
 cd /d "%~dp0"
 
-:: Cek folder root/ ada
-if not exist "root\" (
-    echo [ERROR] Folder 'root\' tidak ditemukan.
-    echo         Pastikan extract root_improved.zip di sini dulu.
+git rev-parse --is-inside-work-tree >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Folder ini bukan repo Git.
+    echo Jalankan file ini dari dalam folder project Git Anda.
     pause
     exit /b 1
 )
 
-echo [STEP 1] Membuat file README.md...
-(
-echo # Raspi Dual MPV Player
-echo.
-echo Sistem dual video player untuk Raspberry Pi 5 menggunakan MPV.
-echo Memutar 2 video secara sinkron di 2 monitor via HDMI.
-echo.
-echo ## Struktur
-echo - `root/boot/firmware/splash/` — script MPV dan GPIO
-echo - `root/etc/systemd/system/` — systemd service files
-echo.
-echo ## Install ke RPi
-echo ```bash
-echo curl -fsSL https://raw.githubusercontent.com/%GITHUB_USER%/%REPO_NAME%/main/install.sh ^| bash
-echo ```
-echo.
-echo ## Kebutuhan
-echo - Raspberry Pi 5
-echo - 2 monitor HDMI
-echo - 5 tombol GPIO ^(pin 17, 27, 22, 23, 24^)
-echo - 12 file video: `1-left.mp4` sampai `6-right.mp4`
-) > README.md
-echo [OK] README.md dibuat
+for /f "delims=" %%i in ('git config --global user.name 2^>nul') do set GIT_NAME=%%i
+for /f "delims=" %%i in ('git config --global user.email 2^>nul') do set GIT_EMAIL=%%i
 
-echo.
-echo [STEP 2] Init git repo...
-if not exist ".git\" (
-    git init
-    echo [OK] Git diinisialisasi
-) else (
-    echo [OK] Git sudah ada, skip init
+if "%GIT_NAME%"=="" (
+    set /p GIT_NAME=Masukkan git user.name:
+    git config --global user.name "%GIT_NAME%"
+)
+
+if "%GIT_EMAIL%"=="" (
+    set /p GIT_EMAIL=Masukkan git user.email:
+    git config --global user.email "%GIT_EMAIL%"
 )
 
 echo.
-echo [STEP 3] Set remote origin...
-git remote remove origin 2>nul
-git remote add origin https://github.com/%GITHUB_USER%/%REPO_NAME%.git
-echo [OK] Remote: https://github.com/%GITHUB_USER%/%REPO_NAME%.git
+echo [INFO] Git identity:
+echo user.name  = %GIT_NAME%
+echo user.email = %GIT_EMAIL%
+echo.
+
+for /f "delims=" %%i in ('git remote get-url origin 2^>nul') do set ORIGIN_URL=%%i
+if "%ORIGIN_URL%"=="" (
+    set /p ORIGIN_URL=Masukkan URL repo GitHub:
+    git remote add origin "%ORIGIN_URL%" 2>nul
+    if errorlevel 1 (
+        git remote set-url origin "%ORIGIN_URL%"
+    )
+)
+
+echo [INFO] Remote origin = %ORIGIN_URL%
+echo.
+
+echo Pilih mode:
+echo 1. Aman. Pull dulu lalu push
+echo 2. Paksa. Force push ke main
+echo.
+set /p MODE=Masukkan pilihan [1/2]:
 
 echo.
-echo [STEP 4] Stage semua file...
+echo [INFO] Mengecek branch aktif...
+git branch --show-current >nul 2>&1
+if errorlevel 1 (
+    echo [INFO] Belum ada branch aktif. Menyiapkan branch main...
+)
+
 git add .
-git status --short
-echo [OK] File di-stage
 
-echo.
-echo [STEP 5] Commit...
-git commit -m "deploy: initial upload dual MPV project" 2>nul || (
-    echo [INFO] Tidak ada perubahan baru, skip commit
+git diff --cached --quiet
+if errorlevel 1 (
+    set /p COMMIT_MSG=Masukkan commit message:
+    if "!COMMIT_MSG!"=="" set COMMIT_MSG=Update project files
+    git commit -m "!COMMIT_MSG!"
+    if errorlevel 1 (
+        echo [ERROR] Commit gagal.
+        pause
+        exit /b 1
+    )
+) else (
+    echo [INFO] Tidak ada perubahan baru untuk di-commit.
 )
-
-echo.
-echo [STEP 6] Push ke GitHub...
-echo.
-echo [INFO] Pastikan repo sudah dibuat dulu di GitHub:
-echo        https://github.com/new
-echo        Nama repo: %REPO_NAME%
-echo        Visibility: Public
-echo        Jangan centang "Add README" atau apapun
-echo.
-pause
 
 git branch -M main
-git push -u origin main
+if errorlevel 1 (
+    echo [ERROR] Gagal set branch ke main.
+    pause
+    exit /b 1
+)
 
-if %ERRORLEVEL% EQU 0 (
+if "%MODE%"=="1" (
     echo.
-    echo ============================================
-    echo  BERHASIL UPLOAD!
-    echo  URL repo: https://github.com/%GITHUB_USER%/%REPO_NAME%
+    echo [INFO] Menarik perubahan dari remote...
+    git pull origin main --allow-unrelated-histories
+    if errorlevel 1 (
+        echo.
+        echo [ERROR] Pull gagal.
+        echo Biasanya karena conflict merge yang harus diselesaikan manual.
+        pause
+        exit /b 1
+    )
+
     echo.
-    echo  Perintah install di RPi:
-    echo  curl -fsSL https://raw.githubusercontent.com/%GITHUB_USER%/%REPO_NAME%/main/install.sh ^| bash
-    echo ============================================
-) else (
+    echo [INFO] Push ke remote...
+    git push -u origin main
+    if errorlevel 1 (
+        echo.
+        echo [ERROR] Push gagal.
+        pause
+        exit /b 1
+    )
+)
+
+if "%MODE%"=="2" (
     echo.
-    echo [ERROR] Push gagal. Kemungkinan penyebab:
-    echo   - Repo belum dibuat di GitHub
-    echo   - Username salah
-    echo   - Belum login git: git config --global user.email "email@kamu.com"
-    echo                      git config --global user.name "Nama Kamu"
+    echo [INFO] Force push ke remote...
+    git push -u origin main --force
+    if errorlevel 1 (
+        echo.
+        echo [ERROR] Force push gagal.
+        pause
+        exit /b 1
+    )
+)
+
+if not "%MODE%"=="1" if not "%MODE%"=="2" (
+    echo [ERROR] Pilihan tidak valid.
+    pause
+    exit /b 1
 )
 
 echo.
+echo [SUCCESS] Proses selesai.
 pause
+exit /b 0
