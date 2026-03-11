@@ -1,17 +1,13 @@
 [Unit]
-Description=MPV dual sync watchdog
+Description=MPV Sync Watchdog
 After=dualmp4.service
 Requires=dualmp4.service
-PartOf=dualmp4.service
 
 [Service]
 Type=simple
-User=pi
-Group=pi
-ExecStart=/usr/bin/python3 /boot/firmware/splash/mpv_sync_watchdog.py
+ExecStart=/usr/bin/python3 /usr/local/bin/mpv_sync_watchdog.py
 Restart=always
-RestartSec=3
-TimeoutStopSec=5
+RestartSec=2
 
 [Install]
-WantedBy=dualmp4.service
+WantedBy=multi-user.target
