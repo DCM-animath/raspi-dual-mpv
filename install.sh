@@ -10,7 +10,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 apt-get update
-apt-get install -y git mpv ffmpeg python3-gpiozero python3-gpiod rsync
+apt-get install -y git mpv ffmpeg python3-gpiozero python3-libgpiod rsync
 
 rm -rf "$APP_DIR"
 git clone "$REPO_URL" "$APP_DIR"
