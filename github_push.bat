@@ -2,17 +2,11 @@
 setlocal ENABLEDELAYEDEXPANSION
 title GitHub Push Helper
 
-echo ==========================================
-echo   GitHub Push Helper
-echo ==========================================
-echo.
-
 cd /d "%~dp0"
 
 git rev-parse --is-inside-work-tree >nul 2>&1
 if errorlevel 1 (
     echo [ERROR] Folder ini bukan repo Git.
-    echo Jalankan file ini dari dalam folder project Git Anda.
     pause
     exit /b 1
 )
@@ -30,12 +24,6 @@ if "%GIT_EMAIL%"=="" (
     git config --global user.email "%GIT_EMAIL%"
 )
 
-echo.
-echo [INFO] Git identity:
-echo user.name  = %GIT_NAME%
-echo user.email = %GIT_EMAIL%
-echo.
-
 for /f "delims=" %%i in ('git remote get-url origin 2^>nul') do set ORIGIN_URL=%%i
 if "%ORIGIN_URL%"=="" (
     set /p ORIGIN_URL=Masukkan URL repo GitHub:
@@ -43,22 +31,6 @@ if "%ORIGIN_URL%"=="" (
     if errorlevel 1 (
         git remote set-url origin "%ORIGIN_URL%"
     )
-)
-
-echo [INFO] Remote origin = %ORIGIN_URL%
-echo.
-
-echo Pilih mode:
-echo 1. Aman. Pull dulu lalu push
-echo 2. Paksa. Force push ke main
-echo.
-set /p MODE=Masukkan pilihan [1/2]:
-
-echo.
-echo [INFO] Mengecek branch aktif...
-git branch --show-current >nul 2>&1
-if errorlevel 1 (
-    echo [INFO] Belum ada branch aktif. Menyiapkan branch main...
 )
 
 git add .
@@ -74,33 +46,36 @@ if errorlevel 1 (
         exit /b 1
     )
 ) else (
-    echo [INFO] Tidak ada perubahan baru untuk di-commit.
+    echo [INFO] Tidak ada perubahan baru.
+    git rev-parse --verify HEAD >nul 2>&1
+    if errorlevel 1 (
+        echo [ERROR] Belum ada commit sama sekali. Tambahkan file dulu lalu commit.
+        pause
+        exit /b 1
+    )
 )
 
-git branch -M main
+git checkout -B main
 if errorlevel 1 (
-    echo [ERROR] Gagal set branch ke main.
+    echo [ERROR] Gagal membuat atau pindah ke branch main.
     pause
     exit /b 1
 )
 
+echo Pilih mode:
+echo 1. Pull lalu push normal
+echo 2. Force push
+set /p MODE=Masukkan pilihan [1/2]:
+
 if "%MODE%"=="1" (
-    echo.
-    echo [INFO] Menarik perubahan dari remote...
     git pull origin main --allow-unrelated-histories
     if errorlevel 1 (
-        echo.
         echo [ERROR] Pull gagal.
-        echo Biasanya karena conflict merge yang harus diselesaikan manual.
         pause
         exit /b 1
     )
-
-    echo.
-    echo [INFO] Push ke remote...
     git push -u origin main
     if errorlevel 1 (
-        echo.
         echo [ERROR] Push gagal.
         pause
         exit /b 1
@@ -108,11 +83,8 @@ if "%MODE%"=="1" (
 )
 
 if "%MODE%"=="2" (
-    echo.
-    echo [INFO] Force push ke remote...
     git push -u origin main --force
     if errorlevel 1 (
-        echo.
         echo [ERROR] Force push gagal.
         pause
         exit /b 1
@@ -125,7 +97,5 @@ if not "%MODE%"=="1" if not "%MODE%"=="2" (
     exit /b 1
 )
 
-echo.
-echo [SUCCESS] Proses selesai.
+echo [SUCCESS] Selesai.
 pause
-exit /b 0
